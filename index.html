@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام فحص الفواتير والترقية - Invoice OCR</title>
+    <!-- استدعاء Tailwind CSS للتصميم السريع -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-6 max-w-2xl">
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-8">نظام الفواتير والـ OCR مع الترقية</h1>
+
+        <!-- قسم شحن الرصيد بالسريال -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">شحن الرصيد باستخدام سريال الترقية</h2>
+            <div class="mb-4">
+                <label class="block text-gray-600 mb-2">مفتاح الـ API الخاص بك:</label>
+                <input type="text" id="apiKey" placeholder="مثال: your-api-key-123" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-600 mb-2">سريال الترقية:</label>
+                <input type="text" id="serialCode" placeholder="مثال: WELCOME-50-FREE" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button onclick="activateSerial()" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">تفعيل السريال وشحن الرصيد</button>
+            <p id="serialResult" class="mt-3 text-sm text-center"></p>
+        </div>
+
+        <!-- قسم رفع الفاتورة وفحصها -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">قراءة وفحص فاتورة (OCR)</h2>
+            <div class="mb-4">
+                <label class="block text-gray-600 mb-2">اختر صورة الفاتورة:</label>
+                <input type="file" id="invoiceFile" accept="image/*" class="w-full px-4 py-2 border rounded-lg bg-gray-50">
+            </div>
+            <button onclick="processInvoice()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">قراءة الفاتورة وخصم نقطة</button>
+            <p id="ocrResult" class="mt-3 text-sm text-center"></p>
+            
+            <div id="ocrOutputContainer" class="mt-4 hidden">
+                <label class="block text-gray-600 mb-1">النص المستخرج:</label>
+                <textarea id="extractedText" rows="6" class="w-full p-3 border rounded-lg bg-gray-50 text-sm" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // دالة تفعيل السريال
+        async function activateSerial() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const serial = document.getElementById('serialCode').value.trim();
+            const resultEl = document.getElementById('serialResult');
+
+            if (!apiKey || !serial) {
+                resultEl.textContent = 'الرجاء إدخال مفتاح الـ API وسريال الترقية معاً.';
+                resultEl.className = 'mt-3 text-sm text-center text-red-600 font-semibold';
+                return;
+            }
+
+            resultEl.textContent = 'جاري التحقق من السريال...';
+            resultEl.className = 'mt-3 text-sm text-center text-gray-600';
+
+            try {
+                const response = await fetch('http://localhost:3000/api/activate-serial', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey, serial: serial })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultEl.textContent = `${data.message} | رصيدك الحالي: ${data.new_balance}`;
+                    resultEl.className = 'mt-3 text-sm text-center text-green-600 font-semibold';
+                } else {
+                    resultEl.textContent = data.error || 'حدث خطأ أثناء التفعيل.';
+                    resultEl.className = 'mt-3 text-sm text-center text-red-600 font-semibold';
+                }
+            } catch (error) {
+                resultEl.textContent = 'تعذر الاتصال بالسيرفر.';
+                resultEl.className = 'mt-3 text-sm text-center text-red-600 font-semibold';
+            }
+        }
+
+        // دالة رفع وقراءة الفاتورة
+        async function processInvoice() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const fileInput = document.getElementById('invoiceFile');
+            const resultEl = document.getElementById('ocrResult');
+            const outputContainer = document.getElementById('ocrOutputContainer');
+            const outputText = document.getElementById('extractedText');
+
+            if (!apiKey) {
+                resultEl.textContent = 'الرجاء إدخال مفتاح الـ API أولاً.';
+                resultEl.className = 'mt-3 text-sm text-center text-red-600 font-semibold';
+                return;
+            }
+
+            if (fileInput.files.length === 0) {
+                resultEl.textContent = 'الرجاء اختيار صورة فاتورة أولاً.';
+                resultEl.className = 'mt-3 text-sm text-center text-red-600 font-semibold';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('invoice', fileInput.files[0]);
+
+            resultEl.textContent = 'جاري قراءة الفاتورة بالذكاء الاصطناعي (OCR)... قد يستغرق ذلك ثوانٍ...';
+            resultEl.className = 'mt-3 text-sm text-center text-blue-600 font-semibold';
+            outputContainer.classList.add('hidden');
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/process-invoice?api_key=${encodeURIComponent(apiKey)}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultEl.textContent = `تمت القراءة بنجاح! الرصيد المتبقي: ${data.remaining_credits}`;
+                    resultEl.className = 'mt-3 text-sm text-center text-green-600 font-semibold';
+                    outputText.value = data.extracted_text;
+                    outputContainer.classList.remove('hidden');
+                } else {
+                    resultEl.textContent = data.error || 'فشلت عملية قراءة الفاتورة.';
+                    resultEl.className = 'mt-3 text-sm text-center text-red-600 font-semibold';
+                }
+            } catch (error) {
+                resultEl.textContent = 'تعذر الاتصال بالسيرفر.';
+                resultEl.className = 'mt-3 text-sm text-center text-red-600 font-semibold';
+            }
+        }
+    </script>
+</body>
+</html>

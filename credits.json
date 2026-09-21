@@ -1,3 +1,15 @@
 {
-  "::1": 0
+  "api_keys": {
+    "your-api-key-123": 10
+  },
+  "serial_keys": {
+    "PROMO-100-CREDITS": {
+      "credits": 100,
+      "used": false
+    },
+    "VIP-upgrade-500": {
+      "credits": 500,
+      "used": false
+    }
+  }
 }
