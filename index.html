@@ -45,6 +45,11 @@
     </div>
 
     <script>
+        // تحديد رابط السيرفر تلقائياً (إذا كنت على الموقع المحلي أو على Render)
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000' 
+            : 'https://invoice-ocr-api-suj4.onrender.com';
+
         // دالة تفعيل السريال
         async function activateSerial() {
             const apiKey = document.getElementById('apiKey').value.trim();
@@ -61,7 +66,7 @@
             resultEl.className = 'mt-3 text-sm text-center text-gray-600';
 
             try {
-                const response = await fetch('http://localhost:3000/api/activate-serial', {
+                const response = await fetch(`${API_BASE_URL}/api/activate-serial`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ api_key: apiKey, serial: serial })
@@ -110,7 +115,7 @@
             outputContainer.classList.add('hidden');
 
             try {
-                const response = await fetch(`http://localhost:3000/api/process-invoice?api_key=${encodeURIComponent(apiKey)}`, {
+                const response = await fetch(`${API_BASE_URL}/api/process-invoice?api_key=${encodeURIComponent(apiKey)}`, {
                     method: 'POST',
                     body: formData
                 });
